@@ -22,7 +22,9 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
+import { Route as ClientsIndexRouteImport } from './routes/clients.index'
 import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
@@ -89,16 +91,26 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const ClientsIndexRoute = ClientsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientsRoute,
+} as any)
 const ProjectsIdRoute = ProjectsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ProjectsRoute,
 } as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ClientsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
-  '/clients': typeof ClientsRoute
+  '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/employees': typeof EmployeesRoute
   '/notifications': typeof NotificationsRoute
@@ -108,13 +120,14 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
+  '/clients/': typeof ClientsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
-  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRoute
   '/employees': typeof EmployeesRoute
   '/notifications': typeof NotificationsRoute
@@ -123,14 +136,16 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
+  '/clients': typeof ClientsIndexRoute
   '/projects': typeof ProjectsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/calendar': typeof CalendarRoute
-  '/clients': typeof ClientsRoute
+  '/clients': typeof ClientsRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/employees': typeof EmployeesRoute
   '/notifications': typeof NotificationsRoute
@@ -140,7 +155,9 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/tasks': typeof TasksRoute
   '/teams': typeof TeamsRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/projects/$id': typeof ProjectsIdRoute
+  '/clients/': typeof ClientsIndexRoute
   '/projects/': typeof ProjectsIndexRoute
 }
 export interface FileRouteTypes {
@@ -158,13 +175,14 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/teams'
+    | '/clients/$id'
     | '/projects/$id'
+    | '/clients/'
     | '/projects/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/calendar'
-    | '/clients'
     | '/documents'
     | '/employees'
     | '/notifications'
@@ -173,7 +191,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/teams'
+    | '/clients/$id'
     | '/projects/$id'
+    | '/clients'
     | '/projects'
   id:
     | '__root__'
@@ -189,14 +209,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/teams'
+    | '/clients/$id'
     | '/projects/$id'
+    | '/clients/'
     | '/projects/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CalendarRoute: typeof CalendarRoute
-  ClientsRoute: typeof ClientsRoute
+  ClientsRoute: typeof ClientsRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
   EmployeesRoute: typeof EmployeesRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -301,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsIndexRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/clients/': {
+      id: '/clients/'
+      path: '/'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof ClientsIndexRouteImport
+      parentRoute: typeof ClientsRoute
+    }
     '/projects/$id': {
       id: '/projects/$id'
       path: '/$id'
@@ -308,8 +337,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsIdRouteImport
       parentRoute: typeof ProjectsRoute
     }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
+      parentRoute: typeof ClientsRoute
+    }
   }
 }
+
+interface ClientsRouteChildren {
+  ClientsIdRoute: typeof ClientsIdRoute
+  ClientsIndexRoute: typeof ClientsIndexRoute
+}
+
+const ClientsRouteChildren: ClientsRouteChildren = {
+  ClientsIdRoute: ClientsIdRoute,
+  ClientsIndexRoute: ClientsIndexRoute,
+}
+
+const ClientsRouteWithChildren =
+  ClientsRoute._addFileChildren(ClientsRouteChildren)
 
 interface ProjectsRouteChildren {
   ProjectsIdRoute: typeof ProjectsIdRoute
@@ -328,7 +377,7 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CalendarRoute: CalendarRoute,
-  ClientsRoute: ClientsRoute,
+  ClientsRoute: ClientsRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
   EmployeesRoute: EmployeesRoute,
   NotificationsRoute: NotificationsRoute,
