@@ -13,6 +13,22 @@ export type Priority = "Low" | "Medium" | "High" | "Critical";
 export type TaskStatus = "To Do" | "Assigned" | "In Progress" | "Waiting Review" | "Completed";
 export type Team = "Instrumentation" | "Numerical";
 
+export type ProjectStage =
+  | "Project Received"
+  | "Planning"
+  | "Instrumentation Work"
+  | "Site Monitoring"
+  | "Numerical Analysis"
+  | "Report Preparation"
+  | "Review"
+  | "Completed";
+
+export type ProjectHealth = "Healthy" | "Attention" | "Delayed" | "Blocked";
+export type ResponsibleTeam = "Instrumentation" | "Numerical" | "Management" | "—";
+
+export type EventType = "Meeting" | "Site Visit" | "Deadline" | "Review" | "Leave";
+export type DocCategory = "Reports" | "Drawings" | "Photos" | "Sensor Layouts" | "Calculations";
+
 export interface Employee {
   id: string;
   name: string;
@@ -26,6 +42,8 @@ export interface Employee {
   projects: string[];
   completedProjects: number;
   performance: number;
+  reportingManagerId?: string;
+  experienceYears: number;
 }
 
 export interface Client {
@@ -52,10 +70,14 @@ export interface Project {
   numericalEngineers: string[];
   startDate: string;
   endDate: string;
+  expectedCompletion: string;
   status: ProjectStatus;
   priority: Priority;
   progress: number;
-  health: "Good" | "At Risk" | "Critical";
+  health: ProjectHealth;
+  stage: ProjectStage;
+  responsibleTeam: ResponsibleTeam;
+  delayDays: number;
   description: string;
   workflowStep: number;
 }
@@ -70,13 +92,17 @@ export interface Task {
   priority: Priority;
   dueDate: string;
   progress: number;
+  stage: ProjectStage;
 }
 
 export interface DocumentItem {
   id: string;
   name: string;
   projectId: string;
-  type: "Report" | "Drawing" | "Site Photo" | "Sensor Layout" | "PDF";
+  category: DocCategory;
+  version: string;
+  department: Team | "Management";
+  approvedBy: string;
   size: string;
   uploadedBy: string;
   uploadedAt: string;
@@ -97,4 +123,12 @@ export interface Activity {
   actor: string;
   action: string;
   time: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  date: string;
+  title: string;
+  type: EventType;
+  projectId?: string;
 }
