@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Mail, Phone } from "lucide-react";
 import { ErpShell } from "@/components/erp/Shell";
-import { employees, tasks } from "@/data/mock";
+import { employees, tasks, getEmployee, currentProjectForEmployee } from "@/data/mock";
 
 export const Route = createFileRoute("/employees")({
   head: () => ({ meta: [{ title: "Employees — KDM SHM ERP" }] }),
@@ -25,12 +25,17 @@ function EmployeesPage() {
             <thead>
               <tr>
                 <th>Employee</th><th>ID</th><th>Designation</th><th>Department</th>
-                <th>Projects</th><th>Tasks</th><th>Contact</th><th>Availability</th>
+                <th>Reporting Manager</th><th>Experience</th>
+                <th>Current Project</th><th>Workload</th>
+                <th>Contact</th><th>Availability</th>
               </tr>
             </thead>
             <tbody>
               {employees.map((e) => {
                 const activeTasks = tasks.filter((t) => t.assigneeId === e.id && t.status !== "Completed").length;
+                const doneTasks = tasks.filter((t) => t.assigneeId === e.id && t.status === "Completed").length;
+                const cp = currentProjectForEmployee(e.id);
+                const manager = e.reportingManagerId ? getEmployee(e.reportingManagerId) : undefined;
                 return (
                   <tr key={e.id}>
                     <td>
@@ -42,8 +47,13 @@ function EmployeesPage() {
                     <td style={{ fontSize: 12 }}>{e.id}</td>
                     <td style={{ fontSize: 12 }}>{e.designation}</td>
                     <td style={{ fontSize: 12 }}>{e.department}</td>
-                    <td style={{ fontSize: 12 }}>{e.projects.length}</td>
-                    <td style={{ fontSize: 12 }}>{activeTasks}</td>
+                    <td style={{ fontSize: 12 }}>{manager?.name ?? "—"}</td>
+                    <td style={{ fontSize: 12 }}>{e.experienceYears} yrs</td>
+                    <td style={{ fontSize: 12 }}>{cp?.bridgeName ?? "—"}</td>
+                    <td style={{ fontSize: 12 }}>
+                      <div><strong>{activeTasks}</strong> active</div>
+                      <div style={{ color: "var(--erp-muted)" }}>{doneTasks} completed</div>
+                    </td>
                     <td style={{ fontSize: 12 }}>
                       <div className="hstack-8"><Mail size={12} /> {e.email}</div>
                       <div className="hstack-8"><Phone size={12} /> {e.phone}</div>

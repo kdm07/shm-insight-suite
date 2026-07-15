@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { ErpShell } from "@/components/erp/Shell";
-import { StatusBadge, PriorityBadge, ProgressBar } from "@/components/erp/Badges";
+import { StatusBadge, PriorityBadge, ProgressBar, HealthBadge, TeamBadge } from "@/components/erp/Badges";
 import { projects, getClient, getEmployee } from "@/data/mock";
 import type { ProjectStatus } from "@/lib/erp-types";
 
@@ -64,21 +64,22 @@ function ProjectsList() {
           <table className="erp-table">
             <thead>
               <tr>
-                <th>Code</th><th>Project</th><th>Client</th><th>Location</th><th>Manager</th>
-                <th>Start</th><th>End</th><th>Status</th><th>Priority</th><th>Progress</th>
+                <th>Code</th><th>Project</th><th>Client</th><th>Manager</th>
+                <th>Current Stage</th><th>Responsible Team</th>
+                <th>Status</th><th>Health</th><th>Priority</th><th>Progress</th>
               </tr>
             </thead>
             <tbody>
               {paged.map((p) => (
                 <tr key={p.id}>
                   <td><Link to="/projects/$id" params={{ id: p.id }}>{p.code}</Link></td>
-                  <td><div style={{ fontWeight: 600 }}>{p.bridgeName}</div><div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.name}</div></td>
+                  <td><div style={{ fontWeight: 600 }}>{p.bridgeName}</div><div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.location}</div></td>
                   <td style={{ fontSize: 12 }}>{getClient(p.clientId)?.name}</td>
-                  <td style={{ fontSize: 12 }}>{p.location}</td>
                   <td style={{ fontSize: 12 }}>{getEmployee(p.managerId)?.name}</td>
-                  <td style={{ fontSize: 12 }}>{p.startDate}</td>
-                  <td style={{ fontSize: 12 }}>{p.endDate}</td>
+                  <td style={{ fontSize: 12 }}>{p.stage}</td>
+                  <td><TeamBadge team={p.responsibleTeam} /></td>
                   <td><StatusBadge status={p.status} /></td>
+                  <td><HealthBadge health={p.health} /></td>
                   <td><PriorityBadge priority={p.priority} /></td>
                   <td style={{ minWidth: 140 }}>
                     <div className="hstack-8">

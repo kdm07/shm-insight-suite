@@ -1,16 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend,
+  PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
   FolderKanban, Play, CheckCircle2, AlertTriangle, ListChecks,
-  Users, Clock, TrendingUp, Bell,
+  Users, Clock, TrendingUp, Bell, AlertOctagon,
 } from "lucide-react";
 import { ErpShell } from "@/components/erp/Shell";
 import { KPICard } from "@/components/erp/KPICard";
-import { StatusBadge, PriorityBadge, ProgressBar } from "@/components/erp/Badges";
-import { projects, tasks, employees, activities, notifications, getClient } from "@/data/mock";
+import { StatusBadge, PriorityBadge, ProgressBar, HealthBadge, TeamBadge, StageBadge } from "@/components/erp/Badges";
+import { projects, tasks, employees, activities, notifications, getClient, teamStats, workflowSteps, TODAY_ISO } from "@/data/mock";
+import type { ProjectStage } from "@/lib/erp-types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,7 +30,7 @@ function Dashboard() {
   const running = projects.filter((p) => p.status === "Running").length;
   const completed = projects.filter((p) => p.status === "Completed").length;
   const delayed = projects.filter((p) => p.status === "Delayed").length;
-  const todayTasks = tasks.filter((t) => t.status !== "Completed").slice(0, 12).length;
+  const todayTasks = tasks.filter((t) => t.dueDate === TODAY_ISO).length;
   const working = employees.filter((e) => e.availability === "Busy").length;
   const pendingApprovals = tasks.filter((t) => t.status === "Waiting Review").length;
   const avgProgress = Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length);
@@ -46,11 +47,16 @@ function Dashboard() {
     { m: "Sep", started: 2, completed: 3 }, { m: "Oct", started: 4, completed: 2 },
     { m: "Nov", started: 3, completed: 4 }, { m: "Dec", started: 2, completed: 3 },
   ];
-  const workload = [
-    { team: "Instrumentation", tasks: tasks.filter((t) => t.team === "Instrumentation").length },
-    { team: "Numerical", tasks: tasks.filter((t) => t.team === "Numerical").length },
-  ];
-  const progressLine = projects.slice(0, 8).map((p) => ({ n: p.code.slice(-3), progress: p.progress }));
+
+  // Current Project Stage summary
+  const stageSummaryList: ProjectStage[] = ["Planning", "Instrumentation Work", "Numerical Analysis", "Review", "Completed"];
+  const stageCounts = stageSummaryList.map((s) => ({ stage: s, count: projects.filter((p) => p.stage === s).length }));
+
+  // Critical projects (delayed / blocked)
+  const criticalProjects = projects.filter((p) => p.health === "Delayed" || p.health === "Blocked" || p.status === "Delayed");
+
+  const instr = teamStats("Instrumentation");
+  const num = teamStats("Numerical");
 
   return (
     <ErpShell crumbs={[{ label: "Home", to: "/" }, { label: "Dashboard" }]}>
@@ -75,7 +81,55 @@ function Dashboard() {
         <KPICard label="Avg Completion" value={`${avgProgress}%`} icon={TrendingUp} tone="success" />
       </div>
 
+      {/* Current Project Stage summary */}
+      <div className="erp-card" style={{ marginBottom: 20 }}>
+        <div className="erp-card-header">
+          <h3 className="erp-card-title">Current Project Stage</h3>
+          <div className="erp-card-sub">Portfolio breakdown across the SHM workflow</div>
+        </div>
+        <div className="erp-card-body">
+          <div className="erp-grid erp-grid-5">
+            {stageCounts.map((s) => (
+              <div key={s.stage} className="erp-stage-summary">
+                <div className="erp-stage-summary-count">{s.count}</div>
+                <div className="erp-stage-summary-label">{s.stage}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+        {/* Critical Projects widget */}
+        <div className="erp-card">
+          <div className="erp-card-header">
+            <h3 className="erp-card-title"><AlertOctagon size={14} style={{ verticalAlign: "-2px", marginRight: 6, color: "var(--erp-danger)" }} />Critical Projects</h3>
+            <span className="erp-badge erp-badge-danger">{criticalProjects.length}</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="erp-table">
+              <thead><tr><th>Bridge</th><th>Stage</th><th>Responsible</th><th>Health</th><th>Delay</th></tr></thead>
+              <tbody>
+                {criticalProjects.length === 0 && (
+                  <tr><td colSpan={5} style={{ textAlign: "center", color: "var(--erp-muted)" }}>No critical projects</td></tr>
+                )}
+                {criticalProjects.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <Link to="/projects/$id" params={{ id: p.id }}>{p.bridgeName}</Link>
+                      <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.code}</div>
+                    </td>
+                    <td style={{ fontSize: 12 }}>{p.stage}</td>
+                    <td><TeamBadge team={p.responsibleTeam} /></td>
+                    <td><HealthBadge health={p.health} /></td>
+                    <td style={{ fontSize: 12, color: "var(--erp-danger)", fontWeight: 600 }}>{p.delayDays > 0 ? `+${p.delayDays}d` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="erp-card">
           <div className="erp-card-header"><h3 className="erp-card-title">Project Status Distribution</h3></div>
           <div className="erp-card-body" style={{ height: 280 }}>
@@ -90,9 +144,37 @@ function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
+
+      {/* Team Workload cards */}
+      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+        {[
+          { team: "Instrumentation" as const, s: instr },
+          { team: "Numerical" as const, s: num },
+        ].map(({ team, s }) => (
+          <div key={team} className="erp-card">
+            <div className="erp-card-header">
+              <h3 className="erp-card-title">{team} — Team Workload</h3>
+              <TeamBadge team={team} />
+            </div>
+            <div className="erp-card-body">
+              <div className="erp-grid erp-grid-4" style={{ marginBottom: 14 }}>
+                <MiniStat label="Projects" value={s.currentProjects.length} />
+                <MiniStat label="Members" value={s.members.length} />
+                <MiniStat label="Pending Tasks" value={s.pendingTasks} />
+                <MiniStat label="Completion" value={`${s.completionPct}%`} />
+              </div>
+              <div style={{ fontSize: 11, color: "var(--erp-muted)", marginBottom: 6 }}>Task completion</div>
+              <ProgressBar value={s.completionPct} tone={s.completionPct > 60 ? "success" : "warning"} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
         <div className="erp-card">
           <div className="erp-card-header"><h3 className="erp-card-title">Monthly Projects</h3></div>
-          <div className="erp-card-body" style={{ height: 280 }}>
+          <div className="erp-card-body" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthly}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
@@ -106,34 +188,17 @@ function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
         <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Team Workload</h3></div>
+          <div className="erp-card-header"><h3 className="erp-card-title">Workflow Progress</h3></div>
           <div className="erp-card-body" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={workload} layout="vertical">
+              <BarChart data={workflowSteps.map((s) => ({ s, n: projects.filter((p) => p.stage === s).length }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis dataKey="team" type="category" tick={{ fontSize: 12 }} width={110} />
-                <Tooltip />
-                <Bar dataKey="tasks" fill="#2563EB" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Project Progress (%)</h3></div>
-          <div className="erp-card-body" style={{ height: 260 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={progressLine}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="n" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="s" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={70} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Line type="monotone" dataKey="progress" stroke="#2563EB" strokeWidth={2.5} dot={{ r: 4 }} />
-              </LineChart>
+                <Bar dataKey="n" fill="#2563EB" radius={[6, 6, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -163,7 +228,7 @@ function Dashboard() {
                   <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.code}</div>
                 </div>
                 <div style={{ fontSize: 12, color: "var(--erp-muted)", textAlign: "right" }}>
-                  <div>{p.endDate}</div>
+                  <div>{p.expectedCompletion}</div>
                   <PriorityBadge priority={p.priority} />
                 </div>
               </div>
@@ -190,45 +255,38 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="erp-grid erp-grid-2">
-        <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Recent Projects</h3></div>
-          <div style={{ overflowX: "auto" }}>
-            <table className="erp-table">
-              <thead><tr><th>Code</th><th>Bridge</th><th>Client</th><th>Status</th><th>Progress</th></tr></thead>
-              <tbody>
-                {projects.slice(0, 6).map((p) => (
-                  <tr key={p.id}>
-                    <td><Link to="/projects/$id" params={{ id: p.id }}>{p.code}</Link></td>
-                    <td>{p.bridgeName}</td>
-                    <td style={{ fontSize: 12 }}>{getClient(p.clientId)?.name}</td>
-                    <td><StatusBadge status={p.status} /></td>
-                    <td style={{ minWidth: 120 }}><ProgressBar value={p.progress} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Recent Tasks</h3></div>
-          <div style={{ overflowX: "auto" }}>
-            <table className="erp-table">
-              <thead><tr><th>Task</th><th>Team</th><th>Priority</th><th>Due</th></tr></thead>
-              <tbody>
-                {tasks.slice(0, 6).map((t) => (
-                  <tr key={t.id}>
-                    <td>{t.name}</td>
-                    <td style={{ fontSize: 12 }}>{t.team}</td>
-                    <td><PriorityBadge priority={t.priority} /></td>
-                    <td style={{ fontSize: 12 }}>{t.dueDate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="erp-card">
+        <div className="erp-card-header"><h3 className="erp-card-title">Recent Projects</h3></div>
+        <div style={{ overflowX: "auto" }}>
+          <table className="erp-table">
+            <thead><tr><th>Code</th><th>Bridge</th><th>Client</th><th>Stage</th><th>Status</th><th>Health</th><th>Progress</th></tr></thead>
+            <tbody>
+              {projects.slice(0, 6).map((p) => (
+                <tr key={p.id}>
+                  <td><Link to="/projects/$id" params={{ id: p.id }}>{p.code}</Link></td>
+                  <td>{p.bridgeName}</td>
+                  <td style={{ fontSize: 12 }}>{getClient(p.clientId)?.name}</td>
+                  <td style={{ fontSize: 12 }}>{p.stage}</td>
+                  <td><StatusBadge status={p.status} /></td>
+                  <td><HealthBadge health={p.health} /></td>
+                  <td style={{ minWidth: 120 }}><ProgressBar value={p.progress} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </ErpShell>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div style={{ padding: 12, background: "var(--erp-bg)", borderRadius: 10 }}>
+      <div style={{ fontSize: 10, color: "var(--erp-muted)", textTransform: "uppercase", letterSpacing: ".3px", fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{value}</div>
+    </div>
+  );
+}
+// StageBadge is imported for consumers; referenced to avoid unused-import warnings.
+void StageBadge;

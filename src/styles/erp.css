@@ -210,9 +210,12 @@ body {
 
 /* Grid helpers */
 .erp-grid { display: grid; gap: 20px; }
+.erp-grid-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .erp-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .erp-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .erp-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1200px) { .erp-grid-5 { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 900px) { .erp-grid-5 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 1200px) { .erp-grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 900px) { .erp-grid-3, .erp-grid-2 { grid-template-columns: 1fr; } .erp-search input { width: 180px; } }
 @media (max-width: 700px) {
@@ -316,3 +319,18 @@ body {
 .nav-tabs { border-bottom-color: var(--erp-border); }
 .nav-tabs .nav-link { border: none; color: var(--erp-muted); font-weight: 500; font-size: 13px; padding: 10px 14px; }
 .nav-tabs .nav-link.active { color: var(--erp-primary); border-bottom: 2px solid var(--erp-primary); background: transparent; }
+
+/* Stage summary tiles */
+.erp-stage-summary { padding: 16px; background: var(--erp-bg); border: 1px solid var(--erp-border); border-radius: 10px; text-align: center; }
+.erp-stage-summary-count { font-size: 26px; font-weight: 700; color: var(--erp-primary); }
+.erp-stage-summary-label { font-size: 11px; color: var(--erp-muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; margin-top: 4px; }
+
+/* Kanban overdue */
+.erp-kanban-card.overdue { border-color: var(--erp-danger); box-shadow: 0 0 0 1px rgba(239,68,68,.2); }
+
+/* Calendar event color variants */
+.erp-cal-event.evt-meeting   { background: rgba(37,99,235,.14);  color: #1D4ED8; }
+.erp-cal-event.evt-sitevisit { background: rgba(14,165,233,.16); color: #0369A1; }
+.erp-cal-event.evt-deadline  { background: rgba(239,68,68,.14);  color: #B91C1C; }
+.erp-cal-event.evt-review    { background: rgba(245,158,11,.18); color: #B45309; }
+.erp-cal-event.evt-leave     { background: rgba(100,116,139,.16); color: #475569; }
