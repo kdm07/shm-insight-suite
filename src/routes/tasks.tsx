@@ -4,14 +4,23 @@ import { LayoutGrid, List as ListIcon, AlertTriangle } from "lucide-react";
 import { ErpShell } from "@/components/erp/Shell";
 import { PriorityBadge, TaskStatusBadge, ProgressBar, TeamBadge } from "@/components/erp/Badges";
 import { tasks, getEmployee, getProject, projects, employees, TODAY_ISO } from "@/data/mock";
-import type { TaskStatus, Team, Priority } from "@/lib/erp-types";
+import type { TaskStage, Team, Priority } from "@/lib/erp-types";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({ meta: [{ title: "Tasks — KDM SHM ERP" }] }),
   component: TasksPage,
 });
 
-const columns: TaskStatus[] = ["To Do", "Assigned", "In Progress", "Waiting Review", "Completed"];
+const columns: TaskStage[] = [
+  "Site Visit",
+  "Methodology",
+  "Sensor Installation",
+  "Load Testing",
+  "Data Extraction",
+  "Numerical Analysis",
+  "Report Preparation",
+  "Completed",
+];
 
 function TasksPage() {
   const [view, setView] = useState<"kanban" | "list">("kanban");
@@ -33,7 +42,7 @@ function TasksPage() {
       if (engineerId !== "All" && t.assigneeId !== engineerId) return false;
       if (priority !== "All" && t.priority !== priority) return false;
       if (quick === "DueToday" && t.dueDate !== TODAY_ISO) return false;
-      if (quick === "Delayed" && !(t.status !== "Completed" && t.dueDate < TODAY_ISO)) return false;
+      if (quick === "Delayed" && !(t.stage !== "Completed" && t.dueDate < TODAY_ISO)) return false;
       return true;
     });
   }, [projectId, team, engineerId, priority, quick]);
@@ -43,7 +52,7 @@ function TasksPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Tasks</h1>
-          <div className="page-sub">{filtered.length} of {tasks.length} tasks</div>
+          <div className="page-sub">{filtered.length} of {tasks.length} tasks · board columns follow the SHM workflow stages</div>
         </div>
         <div className="hstack-8">
           <button className={`erp-btn ${view === "kanban" ? "erp-btn-primary" : "erp-btn-outline"}`} onClick={() => setView("kanban")}>
@@ -64,7 +73,7 @@ function TasksPage() {
             {projects.map((p) => <option key={p.id} value={p.id}>{p.code} — {p.bridgeName}</option>)}
           </select>
           <select className="form-select form-select-sm" style={{ maxWidth: 160 }} value={team} onChange={(e) => setTeam(e.target.value as Team | "All")}>
-            <option value="All">All Teams</option>
+            <option value="All">All Departments</option>
             <option value="Instrumentation">Instrumentation</option>
             <option value="Numerical">Numerical</option>
           </select>
@@ -79,7 +88,7 @@ function TasksPage() {
           <div className="hstack-8" style={{ marginLeft: "auto" }}>
             <button className={`erp-btn ${quick === "All" ? "erp-btn-primary" : "erp-btn-outline"}`} onClick={() => setQuick("All")}>All</button>
             <button className={`erp-btn ${quick === "DueToday" ? "erp-btn-primary" : "erp-btn-outline"}`} onClick={() => setQuick("DueToday")}>Due Today</button>
-            <button className={`erp-btn ${quick === "Delayed" ? "erp-btn-primary" : "erp-btn-outline"}`} onClick={() => setQuick("Delayed")}>Delayed</button>
+            <button className={`erp-btn ${quick === "Delayed" ? "erp-btn-primary" : "erp-btn-outline"}`} onClick={() => setQuick("Delayed")}>Overdue</button>
           </div>
         </div>
       </div>
@@ -87,7 +96,7 @@ function TasksPage() {
       {view === "kanban" ? (
         <div className="erp-kanban">
           {columns.map((col) => {
-            const items = filtered.filter((t) => t.status === col);
+            const items = filtered.filter((t) => t.stage === col);
             return (
               <div key={col} className="erp-kanban-col">
                 <div className="erp-kanban-col-header">
@@ -97,21 +106,21 @@ function TasksPage() {
                 {items.map((t) => {
                   const emp = getEmployee(t.assigneeId);
                   const proj = getProject(t.projectId);
-                  const overdue = t.status !== "Completed" && t.dueDate < TODAY_ISO;
+                  const overdue = t.stage !== "Completed" && t.dueDate < TODAY_ISO;
                   return (
                     <div key={t.id} className={`erp-kanban-card ${overdue ? "overdue" : ""}`}>
                       <div className="erp-kanban-card-title">{t.name}</div>
                       <div style={{ fontSize: 11, color: "var(--erp-muted)", marginTop: 2 }}>
                         <Link to="/projects/$id" params={{ id: t.projectId }} style={{ color: "var(--erp-primary)", textDecoration: "none" }}>
-                          {proj?.bridgeName}
-                        </Link>
+                          {proj?.code}
+                        </Link>{" · "}<strong style={{ color: "var(--erp-text)" }}>{proj?.bridgeName}</strong>
                       </div>
                       <div className="hstack-8" style={{ marginTop: 6, flexWrap: "wrap" }}>
                         <TeamBadge team={t.team} />
-                        <span className="erp-badge erp-badge-muted">{t.stage}</span>
+                        <span className="erp-badge erp-badge-muted">Project: {proj?.stage}</span>
                       </div>
                       <div style={{ fontSize: 11, color: "var(--erp-muted)", marginTop: 6 }}>
-                        Assigned: <strong style={{ color: "var(--erp-text)" }}>{emp?.name}</strong>
+                        Engineer: <strong style={{ color: "var(--erp-text)" }}>{emp?.name}</strong>
                       </div>
                       <div style={{ marginTop: 8 }}><ProgressBar value={t.progress} tone={overdue ? "danger" : "primary"} /></div>
                       <div className="erp-kanban-card-meta">
@@ -136,21 +145,22 @@ function TasksPage() {
           <div style={{ overflowX: "auto" }}>
             <table className="erp-table">
               <thead>
-                <tr><th>Task</th><th>Project</th><th>Team</th><th>Stage</th><th>Assignee</th><th>Status</th><th>Priority</th><th>Due</th><th>Progress</th></tr>
+                <tr><th>Task</th><th>Project</th><th>Bridge</th><th>Dept.</th><th>Project Stage</th><th>Engineer</th><th>Board Stage</th><th>Priority</th><th>Due</th><th>Progress</th></tr>
               </thead>
               <tbody>
                 {filtered.map((t) => {
                   const emp = getEmployee(t.assigneeId);
                   const proj = getProject(t.projectId);
-                  const overdue = t.status !== "Completed" && t.dueDate < TODAY_ISO;
+                  const overdue = t.stage !== "Completed" && t.dueDate < TODAY_ISO;
                   return (
                     <tr key={t.id}>
                       <td>{t.name}</td>
-                      <td><Link to="/projects/$id" params={{ id: t.projectId }}>{proj?.bridgeName}</Link></td>
+                      <td style={{ fontSize: 12 }}><Link to="/projects/$id" params={{ id: t.projectId }}>{proj?.code}</Link></td>
+                      <td style={{ fontSize: 12 }}>{proj?.bridgeName}</td>
                       <td style={{ fontSize: 12 }}>{t.team}</td>
-                      <td style={{ fontSize: 12 }}>{t.stage}</td>
+                      <td style={{ fontSize: 12 }}>{proj?.stage}</td>
                       <td style={{ fontSize: 12 }}>{emp?.name}</td>
-                      <td><TaskStatusBadge status={t.status} /></td>
+                      <td><TaskStatusBadge status={t.stage} /></td>
                       <td><PriorityBadge priority={t.priority} /></td>
                       <td style={{ fontSize: 12, color: overdue ? "var(--erp-danger)" : undefined, fontWeight: overdue ? 600 : undefined }}>
                         {t.dueDate}{overdue ? " · Overdue" : ""}

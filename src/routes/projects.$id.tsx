@@ -149,7 +149,7 @@ function ProjectDetail() {
               <thead><tr><th>Task</th><th>Team</th><th>Assignee</th><th>Stage</th><th>Status</th><th>Due</th><th>Progress</th></tr></thead>
               <tbody>
                 {projectTasks.map((t) => {
-                  const overdue = t.status !== "Completed" && t.dueDate < TODAY_ISO;
+                  const overdue = t.stage !== "Completed" && t.dueDate < TODAY_ISO;
                   return (
                     <tr key={t.id}>
                       <td>{t.name}</td>
@@ -240,9 +240,9 @@ function TeamPane({
   projectId: string;
 }) {
   const teamTasks = tasks.filter((t) => t.projectId === projectId && t.team === team);
-  const completed = teamTasks.filter((t) => t.status === "Completed").length;
-  const pending = teamTasks.filter((t) => t.status !== "Completed").length;
-  const delayed = teamTasks.filter((t) => t.status !== "Completed" && t.dueDate < TODAY_ISO).length;
+  const completed = teamTasks.filter((t) => t.stage === "Completed").length;
+  const pending = teamTasks.filter((t) => t.stage !== "Completed").length;
+  const delayed = teamTasks.filter((t) => t.stage !== "Completed" && t.dueDate < TODAY_ISO).length;
   const pct = teamTasks.length ? Math.round((completed / teamTasks.length) * 100) : 0;
   const otherProjects = projects.filter((p) => p.id !== projectId && (team === "Instrumentation" ? p.instrumentationEngineers : p.numericalEngineers).some((id) => engineerIds.includes(id))).slice(0, 4);
 

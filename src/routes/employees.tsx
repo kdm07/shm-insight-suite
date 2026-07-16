@@ -32,8 +32,8 @@ function EmployeesPage() {
             </thead>
             <tbody>
               {employees.map((e) => {
-                const activeTasks = tasks.filter((t) => t.assigneeId === e.id && t.status !== "Completed").length;
-                const doneTasks = tasks.filter((t) => t.assigneeId === e.id && t.status === "Completed").length;
+                const activeTasks = tasks.filter((t) => t.assigneeId === e.id && t.stage !== "Completed").length;
+                const doneTasks = tasks.filter((t) => t.assigneeId === e.id && t.stage === "Completed").length;
                 const cp = currentProjectForEmployee(e.id);
                 const manager = e.reportingManagerId ? getEmployee(e.reportingManagerId) : undefined;
                 return (
