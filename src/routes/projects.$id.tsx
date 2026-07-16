@@ -5,7 +5,7 @@ import { Nav, NavItem, NavLink, TabContent, TabPane } from "reactstrap";
 import { ErpShell } from "@/components/erp/Shell";
 import { StatusBadge, PriorityBadge, ProgressBar, HealthBadge, TeamBadge } from "@/components/erp/Badges";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
-import { projects, tasks, documents, activities, getClient, getEmployee, TODAY_ISO } from "@/data/mock";
+import { projects, tasks, documents, activities, getClient, getEmployee, workflowSteps, TODAY_ISO } from "@/data/mock";
 
 export const Route = createFileRoute("/projects/$id")({
   loader: ({ params }) => {
