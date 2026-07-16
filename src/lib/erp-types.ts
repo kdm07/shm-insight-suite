@@ -10,24 +10,58 @@ export type Role =
 
 export type ProjectStatus = "Planning" | "Running" | "Review" | "Completed" | "Delayed";
 export type Priority = "Low" | "Medium" | "High" | "Critical";
-export type TaskStatus = "To Do" | "Assigned" | "In Progress" | "Waiting Review" | "Completed";
 export type Team = "Instrumentation" | "Numerical";
 
+// Full SHM workflow (12 stages, in order)
 export type ProjectStage =
   | "Project Received"
-  | "Planning"
-  | "Instrumentation Work"
-  | "Site Monitoring"
+  | "MD Assignment"
+  | "Site Visit"
+  | "Methodology Preparation"
+  | "Sensor Installation"
+  | "Sensor Validation"
+  | "Load Testing"
+  | "Data Extraction"
   | "Numerical Analysis"
   | "Report Preparation"
-  | "Review"
+  | "Client Submission"
   | "Completed";
+
+// Task board columns — the executable subset of the workflow
+export type TaskStage =
+  | "Site Visit"
+  | "Methodology"
+  | "Sensor Installation"
+  | "Load Testing"
+  | "Data Extraction"
+  | "Numerical Analysis"
+  | "Report Preparation"
+  | "Completed";
+
+// kept for backward compatibility (some files still import TaskStatus)
+export type TaskStatus = TaskStage;
 
 export type ProjectHealth = "Healthy" | "Attention" | "Delayed" | "Blocked";
 export type ResponsibleTeam = "Instrumentation" | "Numerical" | "Management" | "—";
 
-export type EventType = "Meeting" | "Site Visit" | "Deadline" | "Review" | "Leave";
+export type EventType =
+  | "Meeting"
+  | "Site Visit"
+  | "Sensor Installation"
+  | "Load Test"
+  | "Report Submission"
+  | "Client Meeting"
+  | "Deadline"
+  | "Review"
+  | "Leave";
+
 export type DocCategory = "Reports" | "Drawings" | "Photos" | "Sensor Layouts" | "Calculations";
+
+// Status enums for stage-specific tracking
+export type SensorStatus = "Not Started" | "In Progress" | "Installed" | "Validated";
+export type CalibrationStatus = "Pending" | "In Progress" | "Calibrated" | "Failed";
+export type LoadTestStatus = "Not Scheduled" | "Scheduled" | "In Progress" | "Completed";
+export type AnalysisStatus = "Not Started" | "In Progress" | "Under Review" | "Approved";
 
 export interface Employee {
   id: string;
@@ -63,11 +97,16 @@ export interface Project {
   clientId: string;
   bridgeName: string;
   location: string;
+  railwayDivision: string;
+  bridgeType: string;
+  spanLength: string;
+  yearBuilt: number;
   managerId: string;
   instrumentationHodId: string;
   numericalHodId: string;
   instrumentationEngineers: string[];
   numericalEngineers: string[];
+  currentEngineerId: string;
   startDate: string;
   endDate: string;
   expectedCompletion: string;
@@ -76,10 +115,25 @@ export interface Project {
   progress: number;
   health: ProjectHealth;
   stage: ProjectStage;
+  nextStage: ProjectStage | "—";
+  waitingFor: string;
   responsibleTeam: ResponsibleTeam;
   delayDays: number;
   description: string;
   workflowStep: number;
+  // Instrumentation snapshot
+  sensorsPlanned: number;
+  sensorsInstalled: number;
+  sensorStatus: SensorStatus;
+  calibrationStatus: CalibrationStatus;
+  loadTestStatus: LoadTestStatus;
+  dataExtractionProgress: number;
+  // Numerical snapshot
+  siteVisitStatus: "Pending" | "Completed";
+  methodologyStatus: "Draft" | "Under Review" | "Approved";
+  analysisProgress: number;
+  femStatus: AnalysisStatus;
+  reportReviewStatus: "Not Started" | "In Review" | "Approved" | "Submitted";
 }
 
 export interface Task {
@@ -88,11 +142,10 @@ export interface Task {
   projectId: string;
   assigneeId: string;
   team: Team;
-  status: TaskStatus;
+  stage: TaskStage;          // task board column = stage
   priority: Priority;
   dueDate: string;
   progress: number;
-  stage: ProjectStage;
 }
 
 export interface DocumentItem {
