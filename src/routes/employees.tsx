@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Phone } from "lucide-react";
+// icons removed after contact column was consolidated
 import { ErpShell } from "@/components/erp/Shell";
 import { employees, tasks, getEmployee, currentProjectForEmployee } from "@/data/mock";
 
