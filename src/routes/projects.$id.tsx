@@ -146,10 +146,10 @@ function ProjectDetail() {
             </div>
           </TabPane>
           <TabPane tabId="instrumentation">
-            <TeamPane title="Instrumentation" team="Instrumentation" hod={instrHod} engineerIds={p.instrumentationEngineers} projectId={p.id} />
+            <InstrumentationPane p={p} hod={instrHod} engineerIds={p.instrumentationEngineers} />
           </TabPane>
           <TabPane tabId="numerical">
-            <TeamPane title="Numerical" team="Numerical" hod={numHod} engineerIds={p.numericalEngineers} projectId={p.id} />
+            <NumericalPane p={p} hod={numHod} engineerIds={p.numericalEngineers} />
           </TabPane>
           <TabPane tabId="tasks">
             <table className="erp-table">
