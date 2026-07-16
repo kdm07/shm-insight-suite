@@ -334,3 +334,7 @@ body {
 .erp-cal-event.evt-deadline  { background: rgba(239,68,68,.14);  color: #B91C1C; }
 .erp-cal-event.evt-review    { background: rgba(245,158,11,.18); color: #B45309; }
 .erp-cal-event.evt-leave     { background: rgba(100,116,139,.16); color: #475569; }
+.erp-cal-event.evt-sensor    { background: rgba(16,185,129,.16); color: #047857; }
+.erp-cal-event.evt-loadtest  { background: rgba(217,119,6,.18);  color: #B45309; }
+.erp-cal-event.evt-report    { background: rgba(139,92,246,.16); color: #6D28D9; }
+.erp-cal-event.evt-client    { background: rgba(37,99,235,.10);  color: #1E40AF; }
