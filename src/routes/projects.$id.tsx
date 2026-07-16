@@ -65,8 +65,11 @@ function ProjectDetail() {
             <FactPeople label="Project Manager" emp={manager} />
             <FactPeople label="Instrumentation HOD" emp={instrHod} />
             <FactPeople label="Numerical HOD" emp={numHod} />
-            <Fact label="Current Responsible Team" value={<TeamBadge team={p.responsibleTeam} />} />
+            <FactPeople label="Current Engineer" emp={getEmployee(p.currentEngineerId)} />
             <Fact label="Current Stage" value={<span style={{ fontWeight: 600 }}>{p.stage}</span>} />
+            <Fact label="Next Stage" value={<span style={{ fontWeight: 600 }}>{p.nextStage}</span>} />
+            <Fact label="Current Responsible Team" value={<TeamBadge team={p.responsibleTeam} />} />
+            <Fact label="Waiting For" value={<span style={{ fontSize: 12 }}>{p.waitingFor}</span>} />
             <Fact label="Expected Completion" value={p.expectedCompletion} />
             <Fact
               label="Delay Status"
@@ -77,6 +80,7 @@ function ProjectDetail() {
               }
             />
             <Fact label="Project Health" value={<HealthBadge health={p.health} />} />
+            <Fact label="Completion" value={<span style={{ fontWeight: 600 }}>{p.progress}%</span>} />
           </div>
         </div>
       </div>
@@ -87,6 +91,9 @@ function ProjectDetail() {
           <div className="erp-card-body vstack-4">
             <div className="hstack-8"><Building2 size={16} className="text-muted-erp" /><strong>{p.bridgeName}</strong></div>
             <div className="hstack-8"><MapPin size={16} className="text-muted-erp" /><span>{p.location}</span></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Railway Division: <strong style={{ color: "var(--erp-text)" }}>{p.railwayDivision}</strong></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Bridge Type: <strong style={{ color: "var(--erp-text)" }}>{p.bridgeType}</strong></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Span Length: <strong style={{ color: "var(--erp-text)" }}>{p.spanLength}</strong> · Built {p.yearBuilt}</div>
             <div style={{ fontSize: 13, color: "var(--erp-muted)", marginTop: 8 }}>{p.description}</div>
           </div>
         </div>
