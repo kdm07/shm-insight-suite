@@ -37,8 +37,27 @@ function TeamCard({ team }: { team: Team }) {
           </div>
         )}
 
+        {team === "Instrumentation" ? (
+          <div className="erp-grid erp-grid-3" style={{ marginBottom: 12 }}>
+            <Stat label="Current Projects" value={s.currentProjects.length} />
+            <Stat label="Pending Projects" value={s.pendingProjects.length} />
+            <Stat label="Sensors Installed" value={s.sensorsInstalled} />
+            <Stat label="Load Tests Done" value={s.loadTestsDone} />
+            <Stat label="Reports in Prep" value={s.reportsInPrep} />
+            <Stat label="Task Completion" value={`${s.completionPct}%`} />
+          </div>
+        ) : (
+          <div className="erp-grid erp-grid-3" style={{ marginBottom: 12 }}>
+            <Stat label="Current Projects" value={s.currentProjects.length} />
+            <Stat label="Site Visits Done" value={s.siteVisitsDone} />
+            <Stat label="Methodologies Approved" value={s.methodologiesApproved} />
+            <Stat label="Analysis Pending" value={s.analysisPending} />
+            <Stat label="Analysis Completed" value={s.analysisCompleted} />
+            <Stat label="Task Completion" value={`${s.completionPct}%`} />
+          </div>
+        )}
         <div className="erp-grid erp-grid-4" style={{ marginBottom: 12 }}>
-          <Stat label="Current Projects" value={s.currentProjects.length} />
+          <Stat label="Team Members" value={s.members.length} />
           <Stat label="Working" value={s.working} />
           <Stat label="Available" value={s.available} />
           <Stat label="On Leave" value={s.onLeave} />
