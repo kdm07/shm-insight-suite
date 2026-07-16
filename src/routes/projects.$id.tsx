@@ -5,7 +5,7 @@ import { Nav, NavItem, NavLink, TabContent, TabPane } from "reactstrap";
 import { ErpShell } from "@/components/erp/Shell";
 import { StatusBadge, PriorityBadge, ProgressBar, HealthBadge, TeamBadge } from "@/components/erp/Badges";
 import { WorkflowStepper } from "@/components/erp/WorkflowStepper";
-import { projects, tasks, documents, activities, getClient, getEmployee, TODAY_ISO } from "@/data/mock";
+import { projects, tasks, documents, activities, getClient, getEmployee, workflowSteps, TODAY_ISO } from "@/data/mock";
 
 export const Route = createFileRoute("/projects/$id")({
   loader: ({ params }) => {
@@ -65,8 +65,11 @@ function ProjectDetail() {
             <FactPeople label="Project Manager" emp={manager} />
             <FactPeople label="Instrumentation HOD" emp={instrHod} />
             <FactPeople label="Numerical HOD" emp={numHod} />
-            <Fact label="Current Responsible Team" value={<TeamBadge team={p.responsibleTeam} />} />
+            <FactPeople label="Current Engineer" emp={getEmployee(p.currentEngineerId)} />
             <Fact label="Current Stage" value={<span style={{ fontWeight: 600 }}>{p.stage}</span>} />
+            <Fact label="Next Stage" value={<span style={{ fontWeight: 600 }}>{p.nextStage}</span>} />
+            <Fact label="Current Responsible Team" value={<TeamBadge team={p.responsibleTeam} />} />
+            <Fact label="Waiting For" value={<span style={{ fontSize: 12 }}>{p.waitingFor}</span>} />
             <Fact label="Expected Completion" value={p.expectedCompletion} />
             <Fact
               label="Delay Status"
@@ -77,6 +80,7 @@ function ProjectDetail() {
               }
             />
             <Fact label="Project Health" value={<HealthBadge health={p.health} />} />
+            <Fact label="Completion" value={<span style={{ fontWeight: 600 }}>{p.progress}%</span>} />
           </div>
         </div>
       </div>
@@ -87,6 +91,9 @@ function ProjectDetail() {
           <div className="erp-card-body vstack-4">
             <div className="hstack-8"><Building2 size={16} className="text-muted-erp" /><strong>{p.bridgeName}</strong></div>
             <div className="hstack-8"><MapPin size={16} className="text-muted-erp" /><span>{p.location}</span></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Railway Division: <strong style={{ color: "var(--erp-text)" }}>{p.railwayDivision}</strong></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Bridge Type: <strong style={{ color: "var(--erp-text)" }}>{p.bridgeType}</strong></div>
+            <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>Span Length: <strong style={{ color: "var(--erp-text)" }}>{p.spanLength}</strong> · Built {p.yearBuilt}</div>
             <div style={{ fontSize: 13, color: "var(--erp-muted)", marginTop: 8 }}>{p.description}</div>
           </div>
         </div>
@@ -139,17 +146,17 @@ function ProjectDetail() {
             </div>
           </TabPane>
           <TabPane tabId="instrumentation">
-            <TeamPane title="Instrumentation" team="Instrumentation" hod={instrHod} engineerIds={p.instrumentationEngineers} projectId={p.id} />
+            <InstrumentationPane p={p} hod={instrHod} engineerIds={p.instrumentationEngineers} />
           </TabPane>
           <TabPane tabId="numerical">
-            <TeamPane title="Numerical" team="Numerical" hod={numHod} engineerIds={p.numericalEngineers} projectId={p.id} />
+            <NumericalPane p={p} hod={numHod} engineerIds={p.numericalEngineers} />
           </TabPane>
           <TabPane tabId="tasks">
             <table className="erp-table">
               <thead><tr><th>Task</th><th>Team</th><th>Assignee</th><th>Stage</th><th>Status</th><th>Due</th><th>Progress</th></tr></thead>
               <tbody>
                 {projectTasks.map((t) => {
-                  const overdue = t.status !== "Completed" && t.dueDate < TODAY_ISO;
+                  const overdue = t.stage !== "Completed" && t.dueDate < TODAY_ISO;
                   return (
                     <tr key={t.id}>
                       <td>{t.name}</td>
@@ -230,32 +237,33 @@ function FactPeople({ label, emp }: { label: string; emp?: ReturnType<typeof get
   );
 }
 
-function TeamPane({
-  title, team, hod, engineerIds, projectId,
-}: {
-  title: string;
-  team: "Instrumentation" | "Numerical";
-  hod: ReturnType<typeof getEmployee>;
-  engineerIds: string[];
-  projectId: string;
-}) {
-  const teamTasks = tasks.filter((t) => t.projectId === projectId && t.team === team);
-  const completed = teamTasks.filter((t) => t.status === "Completed").length;
-  const pending = teamTasks.filter((t) => t.status !== "Completed").length;
-  const delayed = teamTasks.filter((t) => t.status !== "Completed" && t.dueDate < TODAY_ISO).length;
-  const pct = teamTasks.length ? Math.round((completed / teamTasks.length) * 100) : 0;
-  const otherProjects = projects.filter((p) => p.id !== projectId && (team === "Instrumentation" ? p.instrumentationEngineers : p.numericalEngineers).some((id) => engineerIds.includes(id))).slice(0, 4);
-
+function EngineerGrid({ engineerIds }: { engineerIds: string[] }) {
   return (
-    <div>
-      <div className="erp-grid erp-grid-4" style={{ marginBottom: 16 }}>
-        <div className="erp-card"><div className="erp-card-body"><div style={{ fontSize: 11, color: "var(--erp-muted)", fontWeight: 600, textTransform: "uppercase" }}>Team Progress</div><div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{pct}%</div><ProgressBar value={pct} tone={pct > 60 ? "success" : "warning"} /></div></div>
-        <div className="erp-card"><div className="erp-card-body"><div style={{ fontSize: 11, color: "var(--erp-muted)", fontWeight: 600, textTransform: "uppercase" }}>Completed Tasks</div><div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{completed}</div></div></div>
-        <div className="erp-card"><div className="erp-card-body"><div style={{ fontSize: 11, color: "var(--erp-muted)", fontWeight: 600, textTransform: "uppercase" }}>Pending Tasks</div><div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{pending}</div></div></div>
-        <div className="erp-card"><div className="erp-card-body"><div style={{ fontSize: 11, color: "var(--erp-muted)", fontWeight: 600, textTransform: "uppercase" }}>Delayed Tasks</div><div style={{ fontSize: 22, fontWeight: 700, marginTop: 4, color: delayed > 0 ? "var(--erp-danger)" : undefined }}>{delayed}</div></div></div>
-      </div>
+    <div className="erp-grid erp-grid-3" style={{ marginBottom: 20 }}>
+      {engineerIds.map((id) => {
+        const e = getEmployee(id);
+        if (!e) return null;
+        return (
+          <div key={id} className="erp-card">
+            <div className="erp-card-body hstack-12">
+              <img src={e.photo} className="avatar-md" alt="" />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{e.name}</div>
+                <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{e.designation}</div>
+                <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{e.availability}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{title} — HOD</h4>
+function HodBlock({ title, hod }: { title: string; hod: ReturnType<typeof getEmployee> }) {
+  return (
+    <>
+      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>{title}</h4>
       {hod && (
         <div className="hstack-12" style={{ marginBottom: 20 }}>
           <img src={hod.photo} className="avatar-md" alt="" />
@@ -265,38 +273,165 @@ function TeamPane({
           </div>
         </div>
       )}
-      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Engineers</h4>
-      <div className="erp-grid erp-grid-3" style={{ marginBottom: 20 }}>
-        {engineerIds.map((id) => {
-          const e = getEmployee(id);
-          if (!e) return null;
-          return (
-            <div key={id} className="erp-card">
-              <div className="erp-card-body hstack-12">
-                <img src={e.photo} className="avatar-md" alt="" />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{e.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{e.designation}</div>
-                  <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{e.availability}</div>
-                </div>
-              </div>
+    </>
+  );
+}
+
+function StatusRow({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "success" | "warning" | "danger" | "muted" }) {
+  const color =
+    tone === "success" ? "var(--erp-success)" :
+    tone === "warning" ? "var(--erp-warning)" :
+    tone === "danger" ? "var(--erp-danger)" :
+    tone === "muted" ? "var(--erp-muted)" : undefined;
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px dashed var(--erp-border)", fontSize: 13 }}>
+      <span style={{ color: "var(--erp-muted)" }}>{label}</span>
+      <strong style={{ color }}>{value}</strong>
+    </div>
+  );
+}
+
+function ActivityLists({ pending, completed }: { pending: string[]; completed: string[] }) {
+  return (
+    <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+      <div className="erp-card">
+        <div className="erp-card-header"><h3 className="erp-card-title">Pending Activities</h3></div>
+        <div className="erp-card-body">
+          {pending.length === 0 && <div style={{ color: "var(--erp-muted)", fontSize: 13 }}>No pending activities.</div>}
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {pending.map((a, i) => <li key={i} style={{ fontSize: 13, padding: "3px 0" }}>{a}</li>)}
+          </ul>
+        </div>
+      </div>
+      <div className="erp-card">
+        <div className="erp-card-header"><h3 className="erp-card-title">Completed Activities</h3></div>
+        <div className="erp-card-body">
+          {completed.length === 0 && <div style={{ color: "var(--erp-muted)", fontSize: 13 }}>None yet.</div>}
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {completed.map((a, i) => <li key={i} style={{ fontSize: 13, padding: "3px 0", color: "var(--erp-muted)" }}>{a}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstrumentationPane({
+  p, hod, engineerIds,
+}: {
+  p: (typeof projects)[number];
+  hod: ReturnType<typeof getEmployee>;
+  engineerIds: string[];
+}) {
+  const stageIdx = workflowSteps.indexOf(p.stage);
+  const passed = (s: (typeof workflowSteps)[number]) => stageIdx > workflowSteps.indexOf(s);
+  const at = (s: (typeof workflowSteps)[number]) => p.stage === s;
+
+  const activities = [
+    { name: "Sensor Installation", done: passed("Sensor Installation") },
+    { name: "Sensor Validation & Calibration", done: passed("Sensor Validation") },
+    { name: "Load Testing with Railway", done: passed("Load Testing") },
+    { name: "Data Extraction & Processing", done: passed("Data Extraction") },
+    { name: "Final Report Preparation", done: passed("Report Preparation") },
+  ];
+  const pending = activities.filter((a) => !a.done).map((a) => a.name +
+    (at("Sensor Installation") && a.name === "Sensor Installation" ? " (in progress)" : "") +
+    (at("Sensor Validation") && a.name.startsWith("Sensor Validation") ? " (in progress)" : "") +
+    (at("Load Testing") && a.name.startsWith("Load Testing") ? " (in progress)" : "") +
+    (at("Data Extraction") && a.name.startsWith("Data Extraction") ? " (in progress)" : "") +
+    (at("Report Preparation") && a.name.startsWith("Final Report") ? " (in progress)" : ""));
+  const completed = activities.filter((a) => a.done).map((a) => a.name);
+
+  return (
+    <div>
+      <HodBlock title="Instrumentation HOD" hod={hod} />
+
+      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Assigned Engineers</h4>
+      <EngineerGrid engineerIds={engineerIds} />
+
+      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+        <div className="erp-card">
+          <div className="erp-card-header"><h3 className="erp-card-title">Sensor Installation</h3></div>
+          <div className="erp-card-body">
+            <StatusRow label="Sensors Planned" value={p.sensorsPlanned} />
+            <StatusRow label="Sensors Installed" value={`${p.sensorsInstalled} / ${p.sensorsPlanned}`} />
+            <StatusRow label="Installation Status" value={p.sensorStatus} tone={p.sensorStatus === "Validated" ? "success" : "warning"} />
+            <StatusRow label="Calibration" value={p.calibrationStatus} tone={p.calibrationStatus === "Calibrated" ? "success" : "warning"} />
+            <div style={{ marginTop: 10 }}>
+              <ProgressBar value={p.sensorsPlanned ? Math.round((p.sensorsInstalled / p.sensorsPlanned) * 100) : 0} tone="primary" />
             </div>
-          );
-        })}
+          </div>
+        </div>
+        <div className="erp-card">
+          <div className="erp-card-header"><h3 className="erp-card-title">Testing & Data</h3></div>
+          <div className="erp-card-body">
+            <StatusRow label="Load Test Status" value={p.loadTestStatus} tone={p.loadTestStatus === "Completed" ? "success" : "warning"} />
+            <StatusRow label="Data Extraction" value={`${p.dataExtractionProgress}%`} />
+            <div style={{ marginTop: 6 }}>
+              <ProgressBar value={p.dataExtractionProgress} tone={p.dataExtractionProgress === 100 ? "success" : "primary"} />
+            </div>
+            <StatusRow label="Data Handed to Numerical" value={p.dataExtractionProgress === 100 ? "Yes" : "Pending"} tone={p.dataExtractionProgress === 100 ? "success" : "muted"} />
+            <StatusRow label="Report Preparation" value={p.reportReviewStatus} />
+          </div>
+        </div>
       </div>
 
-      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Current Projects (this team)</h4>
-      <div className="erp-grid erp-grid-2">
-        {otherProjects.map((op) => (
-          <Link key={op.id} to="/projects/$id" params={{ id: op.id }} className="erp-card" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="erp-card-body">
-              <div style={{ fontWeight: 600 }}>{op.bridgeName}</div>
-              <div style={{ fontSize: 12, color: "var(--erp-muted)" }}>{op.code} · {op.stage}</div>
+      <ActivityLists pending={pending} completed={completed} />
+    </div>
+  );
+}
+
+function NumericalPane({
+  p, hod, engineerIds,
+}: {
+  p: (typeof projects)[number];
+  hod: ReturnType<typeof getEmployee>;
+  engineerIds: string[];
+}) {
+  const stageIdx = workflowSteps.indexOf(p.stage);
+  const passed = (s: (typeof workflowSteps)[number]) => stageIdx > workflowSteps.indexOf(s);
+
+  const activities = [
+    { name: "Site Visit & Data Collection", done: passed("Site Visit") },
+    { name: "Methodology Preparation & Approval", done: passed("Methodology Preparation") },
+    { name: "Handover to Instrumentation Team", done: passed("Methodology Preparation") },
+    { name: "Numerical Analysis (FEM)", done: passed("Numerical Analysis") },
+    { name: "Report Review & Sign-off", done: passed("Report Preparation") },
+  ];
+  const pending = activities.filter((a) => !a.done).map((a) => a.name);
+  const completed = activities.filter((a) => a.done).map((a) => a.name);
+
+  return (
+    <div>
+      <HodBlock title="Numerical HOD" hod={hod} />
+
+      <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Assigned Engineers</h4>
+      <EngineerGrid engineerIds={engineerIds} />
+
+      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+        <div className="erp-card">
+          <div className="erp-card-header"><h3 className="erp-card-title">Planning & Methodology</h3></div>
+          <div className="erp-card-body">
+            <StatusRow label="Site Visit" value={p.siteVisitStatus} tone={p.siteVisitStatus === "Completed" ? "success" : "warning"} />
+            <StatusRow label="Methodology Status" value={p.methodologyStatus} tone={p.methodologyStatus === "Approved" ? "success" : "warning"} />
+            <StatusRow label="Sensor Plan" value={`${p.sensorsPlanned} sensors`} />
+            <StatusRow label="Handover to Instrumentation" value={p.methodologyStatus === "Approved" ? "Complete" : "Pending"} tone={p.methodologyStatus === "Approved" ? "success" : "muted"} />
+          </div>
+        </div>
+        <div className="erp-card">
+          <div className="erp-card-header"><h3 className="erp-card-title">Analysis</h3></div>
+          <div className="erp-card-body">
+            <StatusRow label="Analysis Progress" value={`${p.analysisProgress}%`} />
+            <div style={{ marginTop: 6 }}>
+              <ProgressBar value={p.analysisProgress} tone={p.analysisProgress === 100 ? "success" : "primary"} />
             </div>
-          </Link>
-        ))}
-        {otherProjects.length === 0 && <div style={{ color: "var(--erp-muted)", fontSize: 13 }}>No other current projects for this team.</div>}
+            <StatusRow label="FEM Status" value={p.femStatus} tone={p.femStatus === "Approved" ? "success" : "warning"} />
+            <StatusRow label="Report Review" value={p.reportReviewStatus} />
+          </div>
+        </div>
       </div>
+
+      <ActivityLists pending={pending} completed={completed} />
     </div>
   );
 }

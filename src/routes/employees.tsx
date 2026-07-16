@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Phone } from "lucide-react";
+// icons removed after contact column was consolidated
 import { ErpShell } from "@/components/erp/Shell";
 import { employees, tasks, getEmployee, currentProjectForEmployee } from "@/data/mock";
 
@@ -25,15 +25,15 @@ function EmployeesPage() {
             <thead>
               <tr>
                 <th>Employee</th><th>ID</th><th>Designation</th><th>Department</th>
-                <th>Reporting Manager</th><th>Experience</th>
-                <th>Current Project</th><th>Workload</th>
-                <th>Contact</th><th>Availability</th>
+                <th>Reporting HOD</th>
+                <th>Current Project</th><th>Current Stage</th><th>Responsibility</th>
+                <th>Workload</th><th>Availability</th>
               </tr>
             </thead>
             <tbody>
               {employees.map((e) => {
-                const activeTasks = tasks.filter((t) => t.assigneeId === e.id && t.status !== "Completed").length;
-                const doneTasks = tasks.filter((t) => t.assigneeId === e.id && t.status === "Completed").length;
+                const activeTasks = tasks.filter((t) => t.assigneeId === e.id && t.stage !== "Completed").length;
+                const doneTasks = tasks.filter((t) => t.assigneeId === e.id && t.stage === "Completed").length;
                 const cp = currentProjectForEmployee(e.id);
                 const manager = e.reportingManagerId ? getEmployee(e.reportingManagerId) : undefined;
                 return (
@@ -48,15 +48,17 @@ function EmployeesPage() {
                     <td style={{ fontSize: 12 }}>{e.designation}</td>
                     <td style={{ fontSize: 12 }}>{e.department}</td>
                     <td style={{ fontSize: 12 }}>{manager?.name ?? "—"}</td>
-                    <td style={{ fontSize: 12 }}>{e.experienceYears} yrs</td>
                     <td style={{ fontSize: 12 }}>{cp?.bridgeName ?? "—"}</td>
+                    <td style={{ fontSize: 12 }}>{cp?.stage ?? "—"}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {cp && cp.currentEngineerId === e.id
+                        ? <span className="erp-badge erp-badge-primary">Currently active</span>
+                        : cp ? <span style={{ color: "var(--erp-muted)" }}>{cp.responsibleTeam === e.department ? "Team responsible" : "Standby"}</span>
+                        : <span style={{ color: "var(--erp-muted)" }}>—</span>}
+                    </td>
                     <td style={{ fontSize: 12 }}>
                       <div><strong>{activeTasks}</strong> active</div>
                       <div style={{ color: "var(--erp-muted)" }}>{doneTasks} completed</div>
-                    </td>
-                    <td style={{ fontSize: 12 }}>
-                      <div className="hstack-8"><Mail size={12} /> {e.email}</div>
-                      <div className="hstack-8"><Phone size={12} /> {e.phone}</div>
                     </td>
                     <td>
                       <span className={`erp-badge ${e.availability === "Available" ? "erp-badge-success" : e.availability === "Busy" ? "erp-badge-warning" : "erp-badge-muted"}`}>

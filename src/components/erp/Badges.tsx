@@ -1,4 +1,4 @@
-import type { ProjectStatus, Priority, TaskStatus, ProjectHealth, ProjectStage } from "@/lib/erp-types";
+import type { ProjectStatus, Priority, TaskStage, ProjectHealth, ProjectStage } from "@/lib/erp-types";
 
 const projectStatusClass: Record<ProjectStatus, string> = {
   Planning: "erp-badge erp-badge-info",
@@ -7,12 +7,15 @@ const projectStatusClass: Record<ProjectStatus, string> = {
   Completed: "erp-badge erp-badge-success",
   Delayed: "erp-badge erp-badge-danger",
 };
-const taskStatusClass: Record<TaskStatus, string> = {
-  "To Do": "erp-badge erp-badge-muted",
-  Assigned: "erp-badge erp-badge-info",
-  "In Progress": "erp-badge erp-badge-primary",
-  "Waiting Review": "erp-badge erp-badge-warning",
-  Completed: "erp-badge erp-badge-success",
+const taskStageClass: Record<TaskStage, string> = {
+  "Site Visit": "erp-badge erp-badge-info",
+  "Methodology": "erp-badge erp-badge-info",
+  "Sensor Installation": "erp-badge erp-badge-primary",
+  "Load Testing": "erp-badge erp-badge-primary",
+  "Data Extraction": "erp-badge erp-badge-primary",
+  "Numerical Analysis": "erp-badge erp-badge-warning",
+  "Report Preparation": "erp-badge erp-badge-warning",
+  "Completed": "erp-badge erp-badge-success",
 };
 const priorityClass: Record<Priority, string> = {
   Low: "erp-badge erp-badge-muted",
@@ -30,8 +33,8 @@ const healthClass: Record<ProjectHealth, string> = {
 export function StatusBadge({ status }: { status: ProjectStatus }) {
   return <span className={projectStatusClass[status]}>{status}</span>;
 }
-export function TaskStatusBadge({ status }: { status: TaskStatus }) {
-  return <span className={taskStatusClass[status]}>{status}</span>;
+export function TaskStatusBadge({ status }: { status: TaskStage }) {
+  return <span className={taskStageClass[status]}>{status}</span>;
 }
 export function PriorityBadge({ priority }: { priority: Priority }) {
   return <span className={priorityClass[priority]}>{priority}</span>;

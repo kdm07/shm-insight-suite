@@ -13,6 +13,10 @@ export const Route = createFileRoute("/calendar")({
 const eventClass: Record<EventType, string> = {
   Meeting: "erp-cal-event evt-meeting",
   "Site Visit": "erp-cal-event evt-sitevisit",
+  "Sensor Installation": "erp-cal-event evt-sensor",
+  "Load Test": "erp-cal-event evt-loadtest",
+  "Report Submission": "erp-cal-event evt-report",
+  "Client Meeting": "erp-cal-event evt-client",
   Deadline: "erp-cal-event evt-deadline",
   Review: "erp-cal-event evt-review",
   Leave: "erp-cal-event evt-leave",
