@@ -4,13 +4,13 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
-  FolderKanban, Play, CheckCircle2, AlertTriangle, ListChecks,
-  Users, Clock, TrendingUp, Bell, AlertOctagon,
+  FolderKanban, CheckCircle2, AlertTriangle,
+  MapPin, ClipboardList, Cpu, Gauge, LineChart, FileText, Send, Bell, AlertOctagon,
 } from "lucide-react";
 import { ErpShell } from "@/components/erp/Shell";
 import { KPICard } from "@/components/erp/KPICard";
 import { StatusBadge, PriorityBadge, ProgressBar, HealthBadge, TeamBadge, StageBadge } from "@/components/erp/Badges";
-import { projects, tasks, employees, activities, notifications, getClient, teamStats, workflowSteps, TODAY_ISO } from "@/data/mock";
+import { projects, tasks, employees, activities, notifications, getClient, getEmployee, teamStats, workflowSteps, TODAY_ISO } from "@/data/mock";
 import type { ProjectStage } from "@/lib/erp-types";
 
 export const Route = createFileRoute("/")({
@@ -27,17 +27,24 @@ const COLORS = ["#2563EB", "#22C55E", "#F59E0B", "#EF4444", "#0EA5E9"];
 
 function Dashboard() {
   const total = projects.length;
-  const running = projects.filter((p) => p.status === "Running").length;
   const completed = projects.filter((p) => p.status === "Completed").length;
   const delayed = projects.filter((p) => p.status === "Delayed").length;
-  const todayTasks = tasks.filter((t) => t.dueDate === TODAY_ISO).length;
-  const working = employees.filter((e) => e.availability === "Busy").length;
-  const pendingApprovals = tasks.filter((t) => t.status === "Waiting Review").length;
-  const avgProgress = Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length);
+
+  const byStage = (s: ProjectStage) => projects.filter((p) => p.stage === s).length;
+  const stageKpis: { label: string; count: number; icon: typeof MapPin; tone: "primary" | "success" | "warning" | "danger" | "muted" }[] = [
+    { label: "In Site Visit", count: byStage("Site Visit"), icon: MapPin, tone: "primary" },
+    { label: "In Methodology", count: byStage("Methodology Preparation"), icon: ClipboardList, tone: "primary" },
+    { label: "In Sensor Installation", count: byStage("Sensor Installation") + byStage("Sensor Validation"), icon: Cpu, tone: "primary" },
+    { label: "In Load Testing", count: byStage("Load Testing"), tone: "warning", icon: Gauge },
+    { label: "In Numerical Analysis", count: byStage("Numerical Analysis"), icon: LineChart, tone: "primary" },
+    { label: "In Report Preparation", count: byStage("Report Preparation"), icon: FileText, tone: "warning" },
+    { label: "Completed", count: completed, icon: CheckCircle2, tone: "success" },
+    { label: "Delayed Projects", count: delayed, icon: AlertTriangle, tone: "danger" },
+  ];
 
   const statusData = [
     { name: "Planning", value: projects.filter((p) => p.status === "Planning").length },
-    { name: "Running", value: running },
+    { name: "Running", value: projects.filter((p) => p.status === "Running").length },
     { name: "Review", value: projects.filter((p) => p.status === "Review").length },
     { name: "Completed", value: completed },
     { name: "Delayed", value: delayed },
@@ -48,12 +55,11 @@ function Dashboard() {
     { m: "Nov", started: 3, completed: 4 }, { m: "Dec", started: 2, completed: 3 },
   ];
 
-  // Current Project Stage summary
-  const stageSummaryList: ProjectStage[] = ["Planning", "Instrumentation Work", "Numerical Analysis", "Review", "Completed"];
-  const stageCounts = stageSummaryList.map((s) => ({ stage: s, count: projects.filter((p) => p.stage === s).length }));
-
   // Critical projects (delayed / blocked)
   const criticalProjects = projects.filter((p) => p.health === "Delayed" || p.health === "Blocked" || p.status === "Delayed");
+
+  // Current responsibility snapshot — who is holding what right now
+  const activeProjects = projects.filter((p) => p.status !== "Completed");
 
   const instr = teamStats("Instrumentation");
   const num = teamStats("Numerical");
@@ -63,38 +69,98 @@ function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Executive Dashboard</h1>
-          <div className="page-sub">Live overview of Structural Health Monitoring portfolio</div>
+          <div className="page-sub">Live overview of SHM project pipeline across Indian Railway bridges</div>
         </div>
         <Link to="/projects" className="erp-btn erp-btn-primary">View all projects</Link>
       </div>
 
+      {/* Portfolio totals */}
       <div className="erp-grid erp-grid-4" style={{ marginBottom: 20 }}>
-        <KPICard label="Total Projects" value={total} delta="+2 this month" icon={FolderKanban} tone="primary" />
-        <KPICard label="Running" value={running} delta="On track" icon={Play} tone="primary" />
-        <KPICard label="Completed" value={completed} delta="+1 this month" icon={CheckCircle2} tone="success" />
-        <KPICard label="Delayed" value={delayed} delta="Requires attention" icon={AlertTriangle} tone="danger" />
-      </div>
-      <div className="erp-grid erp-grid-4" style={{ marginBottom: 20 }}>
-        <KPICard label="Today's Tasks" value={todayTasks} icon={ListChecks} tone="warning" />
-        <KPICard label="Employees Working" value={working} icon={Users} tone="primary" />
-        <KPICard label="Pending Approvals" value={pendingApprovals} icon={Clock} tone="warning" />
-        <KPICard label="Avg Completion" value={`${avgProgress}%`} icon={TrendingUp} tone="success" />
+        <KPICard label="Total Projects" value={total} delta="Active portfolio" icon={FolderKanban} tone="primary" />
+        <KPICard label="In Progress" value={activeProjects.length} delta={`${activeProjects.length} live`} icon={Send} tone="primary" />
+        <KPICard label="Completed" value={completed} delta="Submitted to client" icon={CheckCircle2} tone="success" />
+        <KPICard label="Delayed" value={delayed} delta="Requires MD attention" icon={AlertTriangle} tone="danger" />
       </div>
 
-      {/* Current Project Stage summary */}
+      {/* Projects by SHM workflow stage */}
       <div className="erp-card" style={{ marginBottom: 20 }}>
         <div className="erp-card-header">
-          <h3 className="erp-card-title">Current Project Stage</h3>
-          <div className="erp-card-sub">Portfolio breakdown across the SHM workflow</div>
+          <h3 className="erp-card-title">Projects by SHM Workflow Stage</h3>
+          <div className="erp-card-sub">Live count across our end-to-end monitoring process</div>
         </div>
         <div className="erp-card-body">
-          <div className="erp-grid erp-grid-5">
-            {stageCounts.map((s) => (
-              <div key={s.stage} className="erp-stage-summary">
-                <div className="erp-stage-summary-count">{s.count}</div>
-                <div className="erp-stage-summary-label">{s.stage}</div>
-              </div>
+          <div className="erp-grid erp-grid-4" style={{ marginBottom: 12 }}>
+            {stageKpis.slice(0, 4).map((k) => (
+              <KPICard key={k.label} label={k.label} value={k.count} icon={k.icon} tone={k.tone} />
             ))}
+          </div>
+          <div className="erp-grid erp-grid-4">
+            {stageKpis.slice(4).map((k) => (
+              <KPICard key={k.label} label={k.label} value={k.count} icon={k.icon} tone={k.tone} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Current responsibility */}
+      <div className="erp-grid erp-grid-2" style={{ marginBottom: 20 }}>
+        <div className="erp-card">
+          <div className="erp-card-header">
+            <h3 className="erp-card-title">Current Responsible Team</h3>
+            <span className="erp-card-sub">{activeProjects.length} active projects</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="erp-table">
+              <thead><tr><th>Bridge</th><th>Stage</th><th>Team</th><th>Waiting For</th></tr></thead>
+              <tbody>
+                {activeProjects.slice(0, 8).map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <Link to="/projects/$id" params={{ id: p.id }}>{p.bridgeName}</Link>
+                      <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.code}</div>
+                    </td>
+                    <td style={{ fontSize: 12 }}>{p.stage}</td>
+                    <td><TeamBadge team={p.responsibleTeam} /></td>
+                    <td style={{ fontSize: 12, color: "var(--erp-muted)" }}>{p.waitingFor}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="erp-card">
+          <div className="erp-card-header">
+            <h3 className="erp-card-title">Current Responsible Engineer</h3>
+            <span className="erp-card-sub">Point-of-contact for each live project</span>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="erp-table">
+              <thead><tr><th>Bridge</th><th>Engineer</th><th>Next Stage</th></tr></thead>
+              <tbody>
+                {activeProjects.slice(0, 8).map((p) => {
+                  const eng = getEmployee(p.currentEngineerId);
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <Link to="/projects/$id" params={{ id: p.id }}>{p.bridgeName}</Link>
+                        <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{p.code}</div>
+                      </td>
+                      <td>
+                        <div className="hstack-8">
+                          {eng && <img src={eng.photo} className="avatar-sm" alt="" />}
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{eng?.name ?? "—"}</div>
+                            <div style={{ fontSize: 11, color: "var(--erp-muted)" }}>{eng?.designation}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ fontSize: 12 }}>{p.nextStage}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -159,10 +225,10 @@ function Dashboard() {
             </div>
             <div className="erp-card-body">
               <div className="erp-grid erp-grid-4" style={{ marginBottom: 14 }}>
-                <MiniStat label="Projects" value={s.currentProjects.length} />
+                <MiniStat label="Current Projects" value={s.currentProjects.length} />
                 <MiniStat label="Members" value={s.members.length} />
                 <MiniStat label="Pending Tasks" value={s.pendingTasks} />
-                <MiniStat label="Completion" value={`${s.completionPct}%`} />
+                <MiniStat label="Task Completion" value={`${s.completionPct}%`} />
               </div>
               <div style={{ fontSize: 11, color: "var(--erp-muted)", marginBottom: 6 }}>Task completion</div>
               <ProgressBar value={s.completionPct} tone={s.completionPct > 60 ? "success" : "warning"} />
@@ -189,12 +255,12 @@ function Dashboard() {
           </div>
         </div>
         <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Workflow Progress</h3></div>
+          <div className="erp-card-header"><h3 className="erp-card-title">Pipeline by Workflow Stage</h3></div>
           <div className="erp-card-body" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={workflowSteps.map((s) => ({ s, n: projects.filter((p) => p.stage === s).length }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                <XAxis dataKey="s" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={70} />
+                <XAxis dataKey="s" tick={{ fontSize: 9 }} interval={0} angle={-25} textAnchor="end" height={90} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
                 <Bar dataKey="n" fill="#2563EB" radius={[6, 6, 0, 0]} />
@@ -219,7 +285,7 @@ function Dashboard() {
           </div>
         </div>
         <div className="erp-card">
-          <div className="erp-card-header"><h3 className="erp-card-title">Upcoming Deadlines</h3></div>
+          <div className="erp-card-header"><h3 className="erp-card-title">Upcoming Report Submissions</h3></div>
           <div className="erp-card-body">
             {projects.filter((p) => p.status !== "Completed").slice(0, 5).map((p) => (
               <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--erp-border)" }}>
@@ -288,5 +354,5 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
-// StageBadge is imported for consumers; referenced to avoid unused-import warnings.
-void StageBadge;
+// StageBadge and tasks import kept for future use
+void StageBadge; void tasks;
